@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # Audience Service Database
+  audience-db:
+    image: postgres:16
+    container_name: audience-postgres
+    environment:
+      POSTGRES_DB: ${AUDIENCE_DB_NAME:-audience_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "${AUDIENCE_DB_PORT:-5432}:5432"
+    volumes:
+      - audience_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - adcore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${AUDIENCE_DB_NAME:-audience_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Campaign Service Database
+  campaign-db:
+    image: postgres:16
+    container_name: campaign-postgres
+    environment:
+      POSTGRES_DB: ${CAMPAIGN_DB_NAME:-campaign_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "${CAMPAIGN_DB_PORT:-5433}:5432"
+    volumes:
+      - campaign_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - adcore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${CAMPAIGN_DB_NAME:-campaign_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Ad Serving Engine Database
+  serving-db:
+    image: postgres:16
+    container_name: serving-postgres
+    environment:
+      POSTGRES_DB: ${SERVING_DB_NAME:-serving_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "${SERVING_DB_PORT:-5434}:5432"
+    volumes:
+      - serving_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - adcore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${SERVING_DB_NAME:-serving_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Tracking Service Database
+  tracking-db:
+    image: postgres:16
+    container_name: tracking-postgres
+    environment:
+      POSTGRES_DB: ${TRACKING_DB_NAME:-tracking_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+    ports:
+      - "${TRACKING_DB_PORT:-5435}:5432"
+    volumes:
+      - tracking_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - adcore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${TRACKING_DB_NAME:-tracking_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Loki (로그 수집)
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+    networks:
+      - adcore-network
+
+  # Grafana (대시보드)
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - adcore-network
+    depends_on:
+      - loki
+      - prometheus
+
+  # Prometheus (메트릭 수집)
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - adcore-network
+
+  # PgAdmin (DB 관리 도구)
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@adcore.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    networks:
+      - adcore-network
+    depends_on:
+      - audience-db
+      - campaign-db
+      - serving-db
+      - tracking-db
+
+networks:
+  adcore-network:
+    driver: bridge
+
+volumes:
+  audience_data:
+    driver: local
+  campaign_data:
+    driver: local
+  serving_data:
+    driver: local
+  tracking_data:
+    driver: local
+  loki_data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  pgadmin_data:
+    driver: local
