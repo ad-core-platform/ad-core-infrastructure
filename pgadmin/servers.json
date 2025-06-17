@@ -1,0 +1,44 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Audience DB",
+      "Group": "AdCore Databases",
+      "Host": "audience-db",
+      "Port": 5432,
+      "MaintenanceDB": "audience_db",
+      "Username": "postgres",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "Campaign DB",
+      "Group": "AdCore Databases",
+      "Host": "campaign-db",
+      "Port": 5432,
+      "MaintenanceDB": "campaign_db",
+      "Username": "postgres",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer"
+    },
+    "3": {
+      "Name": "Serving DB",
+      "Group": "AdCore Databases",
+      "Host": "serving-db",
+      "Port": 5432,
+      "MaintenanceDB": "serving_db",
+      "Username": "postgres",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer"
+    },
+    "4": {
+      "Name": "Tracking DB",
+      "Group": "AdCore Databases",
+      "Host": "tracking-db",
+      "Port": 5432,
+      "MaintenanceDB": "tracking_db",
+      "Username": "postgres",
+      "PassFile": "/tmp/pgpassfile",
+      "SSLMode": "prefer"
+    }
+  }
+}
